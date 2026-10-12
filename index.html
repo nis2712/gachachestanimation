@@ -3,10 +3,9 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>CS2 Style Gacha Box</title>
+  <title>Gacha Box</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
-    /* Animasi pantulan kecil untuk pop-up */
     @keyframes bounce-in {
       0% { transform: scale(0.8); opacity: 0; }
       50% { transform: scale(1.05); opacity: 1; }
@@ -22,7 +21,7 @@
   <div class="max-w-4xl mx-auto">
     <!-- Header -->
     <div class="flex justify-end items-center mb-8">
-      <button id="toggleModeBtn" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600 transition">
+      <button id="toggleModeBtn" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600 transition font-bold">
         Ke Mode Admin
       </button>
     </div>
@@ -30,6 +29,7 @@
     <!-- ================= ADMIN DASHBOARD ================= -->
     <div id="adminPanel" class="hidden bg-gray-800 p-6 rounded-lg shadow-lg">
       <h2 class="text-2xl font-bold text-yellow-400 mb-4">Admin: Atur Hadiah</h2>
+      <p class="text-sm text-gray-400 mb-6">*Setiap perubahan di sini akan otomatis tersimpan di browser Anda.</p>
       
       <form id="addPrizeForm" class="flex gap-4 mb-6">
         <input type="text" id="prizeName" placeholder="Nama Hadiah" required
@@ -46,7 +46,8 @@
           <option value="bg-yellow-400">Emas (Jackpot)</option>
         </select>
         
-        <button type="submit" class="bg-green-500 px-4 py-2 rounded font-bold hover:bg-green-600">Tambah</button>
+        <button type="submit" id="submitPrizeBtn" class="bg-green-500 px-4 py-2 rounded font-bold hover:bg-green-600 transition-colors">Tambah</button>
+        <button type="button" id="cancelEditBtn" class="hidden bg-gray-500 px-4 py-2 rounded font-bold hover:bg-gray-600 transition-colors">Batal</button>
       </form>
 
       <table class="w-full text-left border-collapse">
@@ -61,24 +62,22 @@
         <tbody id="prizesTableBody">
         </tbody>
       </table>
+      
+      <button id="resetDefaultBtn" class="mt-6 text-sm text-red-400 hover:text-red-300 underline">
+        Kembalikan ke Pengaturan Awal (Hapus Save)
+      </button>
     </div>
 
     <!-- ================= USER GACHA UI ================= -->
     <div id="gachaPanel" class="bg-gray-800 p-8 rounded-lg shadow-lg flex flex-col items-center relative">
       
-      <!-- Judul Tepat di Tengah -->
       <h1 class="text-3xl font-bold text-yellow-400 mb-8 text-center drop-shadow-md">
         1 Mawar Buka Chest Isi Akun
       </h1>
 
-      <!-- Container Spinner -->
       <div class="w-[600px] max-w-full overflow-hidden bg-gray-900 rounded-md py-4 relative border-2 border-gray-700 shadow-inner">
-        
-        <!-- Garis Penunjuk Tengah -->
         <div class="absolute top-0 bottom-0 left-1/2 w-1 bg-yellow-400 z-10 transform -translate-x-1/2 shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
-
         <div id="spinnerTrack" class="flex gap-4 px-[248px]" style="width: max-content; transform: translateX(0px);">
-          <!-- Kotak-kotak gacha akan diisi oleh JavaScript -->
         </div>
       </div>
 
@@ -87,15 +86,12 @@
       </button>
 
       <!-- ================= POPUP MODAL HADIAH ================= -->
-      <!-- Wrapper full-width dengan flex justify-center agar posisi PASTI di tengah -->
-      <div id="popupModal" class="hidden absolute top-[180px] left-0 w-full flex justify-center z-50">
+      <div id="popupModal" class="hidden absolute top-[140px] left-0 w-full flex justify-center z-50">
         <div class="bg-gray-800 border-2 border-gray-600 p-5 rounded-xl flex flex-col items-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-bounce-in text-center w-72">
           <h3 class="text-lg font-bold mb-3 text-gray-200">Kamu Mendapatkan:</h3>
           
           <div id="popupPrizeBox" class="w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4">
-            <span id="popupPrizeName" class="text-sm font-extrabold text-white drop-shadow-md text-center px-1">
-              <!-- Nama pemenang -->
-            </span>
+            <span id="popupPrizeName" class="text-sm font-extrabold text-white drop-shadow-md text-center px-1"></span>
           </div>
           
           <button id="resetBtn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-6 py-2 text-sm rounded-full transition w-full">
@@ -111,13 +107,19 @@
     // State Aplikasi
     let isAdmin = false;
     let isSpinning = false;
-    let prizes = [
-      { id: 1, name: 'Zonk', color: 'bg-gray-400', probability: 70 },
-      { id: 2, name: 'Skin Normal', color: 'bg-blue-500', probability: 20 },
-      { id: 3, name: 'Skin Epic', color: 'bg-purple-500', probability: 8 },
-      { id: 4, name: 'Robux 200', color: 'bg-yellow-400', probability: 1.999 },
-      { id: 5, name: 'Jackpot', color: 'bg-red-600', probability: 0.001 },
+    let editingId = null; // Menyimpan ID item yang sedang diedit
+    
+    // Default setting
+    const defaultPrizes = [
+      { id: 1, name: 'Zonk', color: 'bg-gray-400', probability: 0.01 },
+      { id: 2, name: 'Akun Speed 50B', color: 'bg-blue-500', probability: 99.99 }
     ];
+
+    let prizes = JSON.parse(localStorage.getItem('savedGachaPrizes')) || defaultPrizes;
+
+    function savePrizes() {
+      localStorage.setItem('savedGachaPrizes', JSON.stringify(prizes));
+    }
 
     // Referensi Elemen DOM
     const toggleModeBtn = document.getElementById('toggleModeBtn');
@@ -125,12 +127,15 @@
     const gachaPanel = document.getElementById('gachaPanel');
     const prizesTableBody = document.getElementById('prizesTableBody');
     const addPrizeForm = document.getElementById('addPrizeForm');
+    const submitPrizeBtn = document.getElementById('submitPrizeBtn');
+    const cancelEditBtn = document.getElementById('cancelEditBtn');
     const spinnerTrack = document.getElementById('spinnerTrack');
     const spinBtn = document.getElementById('spinBtn');
     const popupModal = document.getElementById('popupModal');
     const popupPrizeBox = document.getElementById('popupPrizeBox');
     const popupPrizeName = document.getElementById('popupPrizeName');
     const resetBtn = document.getElementById('resetBtn');
+    const resetDefaultBtn = document.getElementById('resetDefaultBtn');
 
     // Fungsi Render Tabel Admin
     function renderAdminTable() {
@@ -143,41 +148,95 @@
           <td class="p-2"><div class="w-6 h-6 rounded ${prize.color}"></div></td>
           <td class="p-2">${prize.probability}%</td>
           <td class="p-2">
-            <button onclick="deletePrize(${prize.id})" class="text-red-400 hover:text-red-300">Hapus</button>
+            <button onclick="editPrize(${prize.id})" class="text-blue-400 hover:text-blue-300 font-bold mr-3">Edit</button>
+            <button onclick="deletePrize(${prize.id})" class="text-red-400 hover:text-red-300 font-bold">Hapus</button>
           </td>
         `;
         prizesTableBody.appendChild(tr);
       });
     }
 
-    // Fungsi Hapus Hadiah
+    // Fungsi Hapus
     function deletePrize(id) {
+      if(editingId === id) cancelEdit(); // Batalkan edit jika item yang sedang diedit dihapus
       prizes = prizes.filter(p => p.id !== id);
+      savePrizes();
       renderAdminTable();
       renderInitialSpinner(); 
     }
 
-    // Tambah Hadiah Baru
+    // Fungsi Mulai Edit
+    function editPrize(id) {
+      const prize = prizes.find(p => p.id === id);
+      if (!prize) return;
+
+      editingId = id;
+      document.getElementById('prizeName').value = prize.name;
+      document.getElementById('prizeProb').value = prize.probability;
+      document.getElementById('prizeColor').value = prize.color;
+
+      // Ubah tampilan tombol form
+      submitPrizeBtn.innerText = 'Simpan';
+      submitPrizeBtn.classList.replace('bg-green-500', 'bg-blue-500');
+      submitPrizeBtn.classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
+      cancelEditBtn.classList.remove('hidden');
+    }
+
+    // Fungsi Batal Edit
+    function cancelEdit() {
+      editingId = null;
+      document.getElementById('prizeName').value = '';
+      document.getElementById('prizeProb').value = '';
+      document.getElementById('prizeColor').value = 'bg-gray-400';
+
+      // Kembalikan tampilan tombol form ke "Tambah"
+      submitPrizeBtn.innerText = 'Tambah';
+      submitPrizeBtn.classList.replace('bg-blue-500', 'bg-green-500');
+      submitPrizeBtn.classList.replace('hover:bg-blue-600', 'hover:bg-green-600');
+      cancelEditBtn.classList.add('hidden');
+    }
+
+    cancelEditBtn.addEventListener('click', cancelEdit);
+
+    // Form Tambah / Simpan Edit
     addPrizeForm.addEventListener('submit', function(e) {
       e.preventDefault();
       const name = document.getElementById('prizeName').value;
       const prob = document.getElementById('prizeProb').value;
       const color = document.getElementById('prizeColor').value;
 
-      prizes.push({
-        id: Date.now(),
-        name: name,
-        probability: Number(prob),
-        color: color
-      });
-
-      document.getElementById('prizeName').value = '';
-      document.getElementById('prizeProb').value = '';
+      if (editingId) {
+        // Mode Edit: Update item yang ada
+        const index = prizes.findIndex(p => p.id === editingId);
+        if (index !== -1) {
+          prizes[index] = { ...prizes[index], name, probability: Number(prob), color };
+        }
+        cancelEdit(); // Reset form
+      } else {
+        // Mode Tambah: Masukkan item baru
+        prizes.push({ id: Date.now(), name, probability: Number(prob), color });
+        document.getElementById('prizeName').value = '';
+        document.getElementById('prizeProb').value = '';
+      }
+      
+      savePrizes();
       renderAdminTable();
       renderInitialSpinner();
     });
 
-    // Toggle Mode Admin/Gacha
+    // Reset ke Settingan Default
+    resetDefaultBtn.addEventListener('click', () => {
+      const confirmReset = confirm("Apakah Anda yakin ingin mengembalikan pengaturan ke awal (Zonk & Akun Speed saja)?");
+      if(confirmReset) {
+        localStorage.removeItem('savedGachaPrizes');
+        prizes = [...defaultPrizes];
+        cancelEdit();
+        renderAdminTable();
+        renderInitialSpinner();
+      }
+    });
+
+    // Toggle Mode
     toggleModeBtn.addEventListener('click', () => {
       isAdmin = !isAdmin;
       if (isAdmin) {
@@ -191,7 +250,7 @@
       }
     });
 
-    // Fungsi Probabilitas Berbobot
+    // Probabilitas Berbobot
     function getWeightedPrize() {
       const totalWeight = prizes.reduce((sum, prize) => sum + Number(prize.probability), 0);
       let randomNum = Math.random() * totalWeight;
@@ -201,10 +260,10 @@
         }
         randomNum -= prize.probability;
       }
-      return prizes[prizes.length - 1]; 
+      return prizes[prizes.length - 1] || defaultPrizes[0]; 
     }
 
-    // Render HTML untuk satu kotak gacha
+    // Render HTML untuk satu kotak
     function createGachaItemHTML(item) {
       return `
         <div class="w-[104px] h-[104px] flex-shrink-0 flex items-center justify-center rounded-lg shadow-inner ${item ? item.color : 'bg-gray-700'}">
@@ -215,7 +274,6 @@
       `;
     }
 
-    // Render Spinner Awal (Kosongan/Dummy)
     function renderInitialSpinner() {
       spinnerTrack.innerHTML = '';
       for (let i = 0; i < 7; i++) {
@@ -223,7 +281,7 @@
       }
     }
 
-    // Logika Utama Gacha (Spin)
+    // Spin
     spinBtn.addEventListener('click', () => {
       if (isSpinning || prizes.length === 0) return;
       isSpinning = true;
@@ -253,30 +311,25 @@
       spinnerTrack.innerHTML = itemsHTML;
 
       setTimeout(() => {
-        const itemWidth = 120; // 104px kotak + 16px gap
+        const itemWidth = 120; 
         const containerWidth = 600; 
         const centerOffset = containerWidth / 2 - itemWidth / 2;
-        
-        // Posisikan kotak penanda sedikit acak
         const randomStop = Math.random() * 40 - 20; 
         const paddingOffset = 248; 
-        
         const finalPosition = -(winningIndex * itemWidth) + centerOffset + randomStop - paddingOffset;
 
         spinnerTrack.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.15, 1)';
         spinnerTrack.style.transform = `translateX(${finalPosition}px)`;
 
-        // Munculkan popup saat animasi selesai
         setTimeout(() => {
           popupPrizeBox.className = `w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4 ${winner.color}`;
           popupPrizeName.innerText = winner.name;
           popupModal.classList.remove('hidden');
         }, 5200);
-
       }, 50);
     });
 
-    // Logika Reset
+    // Reset Animasi
     resetBtn.addEventListener('click', () => {
       popupModal.classList.add('hidden'); 
       isSpinning = false;
