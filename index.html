@@ -3,8 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Gacha Box</title>
+  <title>Gacha Box TikTok Live</title>
   <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Menambahkan library Socket.io untuk menerima sinyal dari server Node.js -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
   <style>
     /* Animasi pantulan kecil untuk pop-up */
     @keyframes bounce-in {
@@ -20,8 +22,9 @@
 <body class="bg-gray-900 text-white font-sans min-h-screen p-8">
 
   <div class="max-w-4xl mx-auto">
-    <!-- Header -->
-    <div class="flex justify-end items-center mb-8">
+    <!-- Header dengan Status Koneksi TikTok -->
+    <div class="flex justify-between items-center mb-8">
+      <span id="connectionStatus" class="text-sm font-bold text-red-500">🔴 Offline (TikTok Server Belum Jalan)</span>
       <button id="toggleModeBtn" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600 transition font-bold">
         Ke Mode Admin
       </button>
@@ -84,20 +87,24 @@
       </div>
 
       <button id="spinBtn" class="mt-10 bg-green-500 hover:bg-green-400 hover:scale-105 hover:shadow-[0_0_15px_rgba(34,197,94,0.5)] px-8 py-3 rounded-full text-xl font-bold transition-all">
-        Buka Gacha
+        Buka Gacha Manual
       </button>
 
       <!-- ================= POPUP MODAL HADIAH ================= -->
       <div id="popupModal" class="hidden absolute top-[100px] left-0 w-full flex justify-center z-50">
         <div class="bg-gray-800 border-2 border-gray-600 p-5 rounded-xl flex flex-col items-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-bounce-in text-center w-72">
-          <h3 class="text-lg font-bold mb-3 text-gray-200">Kamu Mendapatkan:</h3>
+          
+          <!-- Judul Popup Berubah Mengikuti Nama Pengirim -->
+          <h3 class="text-lg font-bold mb-3 text-gray-200">
+            <span id="winnerUsername" class="text-yellow-400">Kamu</span> Mendapatkan:
+          </h3>
           
           <div id="popupPrizeBox" class="w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4">
             <span id="popupPrizeName" class="text-sm font-extrabold text-white drop-shadow-md text-center px-1"></span>
           </div>
           
           <button id="resetBtn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-6 py-2 text-sm rounded-full transition w-full">
-            Oke, Mengerti!
+            Oke, Lanjut!
           </button>
         </div>
       </div>
@@ -106,6 +113,28 @@
   </div>
 
   <script>
+    // Koneksi ke server Node.js lokal (TikTok Live)
+    const socket = io('http://localhost:3000');
+    const connectionStatus = document.getElementById('connectionStatus');
+
+    socket.on('connect', () => {
+      connectionStatus.innerText = '🟢 Online (Terhubung ke TikTok Server)';
+      connectionStatus.className = 'text-sm font-bold text-green-400';
+    });
+    socket.on('disconnect', () => {
+      connectionStatus.innerText = '🔴 Offline (TikTok Server Mati)';
+      connectionStatus.className = 'text-sm font-bold text-red-500';
+    });
+
+    // Menerima perintah spin dari TikTok
+    socket.on('putarGacha', (data) => {
+      if (!isSpinning) {
+        triggerSpin(data.sender); // Putar gacha dengan nama pengirim
+      } else {
+        console.log(`Gacha sedang berputar, menunda putaran untuk ${data.sender}`);
+      }
+    });
+
     // State Aplikasi
     let isAdmin = false;
     let isSpinning = false;
@@ -123,7 +152,6 @@
       const savedData = localStorage.getItem('savedGachaPrizes');
       if (savedData) {
         prizes = JSON.parse(savedData);
-        // Jika data entah kenapa tersimpan kosong, kembalikan ke default
         if (!Array.isArray(prizes) || prizes.length === 0) {
           prizes = [...defaultPrizes];
         }
@@ -157,6 +185,7 @@
     const popupModal = document.getElementById('popupModal');
     const popupPrizeBox = document.getElementById('popupPrizeBox');
     const popupPrizeName = document.getElementById('popupPrizeName');
+    const winnerUsername = document.getElementById('winnerUsername');
     const resetBtn = document.getElementById('resetBtn');
     const resetDefaultBtn = document.getElementById('resetDefaultBtn');
 
@@ -300,8 +329,8 @@
       }
     }
 
-    // Spin
-    spinBtn.addEventListener('click', () => {
+    // Fungsi Utama Spin (Diubah menjadi fungsi agar bisa dipanggil oleh tombol atau Socket TikTok)
+    function triggerSpin(senderName = "Kamu") {
       if (isSpinning || prizes.length === 0) return;
       isSpinning = true;
       spinBtn.innerText = 'Sedang Membuka...';
@@ -340,12 +369,19 @@
         spinnerTrack.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.15, 1)';
         spinnerTrack.style.transform = `translateX(${finalPosition}px)`;
 
+        // Tampilkan Popup Pemenang
         setTimeout(() => {
+          winnerUsername.innerText = senderName; // Ubah nama di popup menjadi nama pengirim TikTok
           popupPrizeBox.className = `w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4 ${winner.color}`;
           popupPrizeName.innerText = winner.name;
           popupModal.classList.remove('hidden');
         }, 5200);
       }, 50);
+    }
+
+    // Klik tombol Buka Gacha secara manual
+    spinBtn.addEventListener('click', () => {
+      triggerSpin("Kamu");
     });
 
     // Reset Animasi
@@ -353,7 +389,7 @@
       popupModal.classList.add('hidden'); 
       isSpinning = false;
       
-      spinBtn.innerText = 'Buka Gacha';
+      spinBtn.innerText = 'Buka Gacha Manual';
       spinBtn.classList.replace('bg-gray-600', 'bg-green-500');
       spinBtn.classList.replace('cursor-not-allowed', 'hover:bg-green-400');
       spinBtn.classList.add('hover:scale-105');
