@@ -6,6 +6,7 @@
   <title>Gacha Box</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Animasi pantulan kecil untuk pop-up */
     @keyframes bounce-in {
       0% { transform: scale(0.8); opacity: 0; }
       50% { transform: scale(1.05); opacity: 1; }
@@ -76,6 +77,7 @@
       </h1>
 
       <div class="w-[600px] max-w-full overflow-hidden bg-gray-900 rounded-md py-4 relative border-2 border-gray-700 shadow-inner">
+        <!-- Garis Penunjuk Tengah -->
         <div class="absolute top-0 bottom-0 left-1/2 w-1 bg-yellow-400 z-10 transform -translate-x-1/2 shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
         <div id="spinnerTrack" class="flex gap-4 px-[248px]" style="width: max-content; transform: translateX(0px);">
         </div>
@@ -107,7 +109,7 @@
     // State Aplikasi
     let isAdmin = false;
     let isSpinning = false;
-    let editingId = null; // Menyimpan ID item yang sedang diedit
+    let editingId = null; 
     
     // Default setting
     const defaultPrizes = [
@@ -115,10 +117,31 @@
       { id: 2, name: 'Akun Speed 50B', color: 'bg-blue-500', probability: 99.99 }
     ];
 
-    let prizes = JSON.parse(localStorage.getItem('savedGachaPrizes')) || defaultPrizes;
+    // Sistem Load Data yang Lebih Kuat
+    let prizes = [];
+    try {
+      const savedData = localStorage.getItem('savedGachaPrizes');
+      if (savedData) {
+        prizes = JSON.parse(savedData);
+        // Jika data entah kenapa tersimpan kosong, kembalikan ke default
+        if (!Array.isArray(prizes) || prizes.length === 0) {
+          prizes = [...defaultPrizes];
+        }
+      } else {
+        prizes = [...defaultPrizes];
+      }
+    } catch (e) {
+      console.error("Gagal memuat data:", e);
+      prizes = [...defaultPrizes];
+    }
 
+    // Fungsi Simpan
     function savePrizes() {
-      localStorage.setItem('savedGachaPrizes', JSON.stringify(prizes));
+      try {
+        localStorage.setItem('savedGachaPrizes', JSON.stringify(prizes));
+      } catch (e) {
+        console.warn("Browser Anda memblokir fitur penyimpanan lokal saat dijalankan secara lokal (file://).");
+      }
     }
 
     // Referensi Elemen DOM
@@ -158,7 +181,7 @@
 
     // Fungsi Hapus
     function deletePrize(id) {
-      if(editingId === id) cancelEdit(); // Batalkan edit jika item yang sedang diedit dihapus
+      if(editingId === id) cancelEdit(); 
       prizes = prizes.filter(p => p.id !== id);
       savePrizes();
       renderAdminTable();
@@ -175,7 +198,6 @@
       document.getElementById('prizeProb').value = prize.probability;
       document.getElementById('prizeColor').value = prize.color;
 
-      // Ubah tampilan tombol form
       submitPrizeBtn.innerText = 'Simpan';
       submitPrizeBtn.classList.replace('bg-green-500', 'bg-blue-500');
       submitPrizeBtn.classList.replace('hover:bg-green-600', 'hover:bg-blue-600');
@@ -189,7 +211,6 @@
       document.getElementById('prizeProb').value = '';
       document.getElementById('prizeColor').value = 'bg-gray-400';
 
-      // Kembalikan tampilan tombol form ke "Tambah"
       submitPrizeBtn.innerText = 'Tambah';
       submitPrizeBtn.classList.replace('bg-blue-500', 'bg-green-500');
       submitPrizeBtn.classList.replace('hover:bg-blue-600', 'hover:bg-green-600');
@@ -206,14 +227,12 @@
       const color = document.getElementById('prizeColor').value;
 
       if (editingId) {
-        // Mode Edit: Update item yang ada
         const index = prizes.findIndex(p => p.id === editingId);
         if (index !== -1) {
           prizes[index] = { ...prizes[index], name, probability: Number(prob), color };
         }
-        cancelEdit(); // Reset form
+        cancelEdit(); 
       } else {
-        // Mode Tambah: Masukkan item baru
         prizes.push({ id: Date.now(), name, probability: Number(prob), color });
         document.getElementById('prizeName').value = '';
         document.getElementById('prizeProb').value = '';
@@ -344,6 +363,7 @@
       renderInitialSpinner(); 
     });
 
+    // Inisialisasi awal
     renderAdminTable();
     renderInitialSpinner();
   </script>
