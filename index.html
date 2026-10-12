@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>CS2 Style Gacha Box</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    /* Animasi pantulan kecil untuk pop-up */
+    @keyframes bounce-in {
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+    .animate-bounce-in {
+      animation: bounce-in 0.4s cubic-bezier(0.15, 0.85, 0.15, 1) forwards;
+    }
+  </style>
+</head>
+<body class="bg-gray-900 text-white font-sans min-h-screen p-8">
+
+  <div class="max-w-4xl mx-auto">
+    <!-- Header -->
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-3xl font-bold text-yellow-400">CS2 Style Gacha Box</h1>
+      <button id="toggleModeBtn" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600 transition">
+        Ke Mode Admin
+      </button>
+    </div>
+
+    <!-- ================= ADMIN DASHBOARD ================= -->
+    <div id="adminPanel" class="hidden bg-gray-800 p-6 rounded-lg shadow-lg">
+      <h2 class="text-2xl font-semibold mb-4">Admin: Atur Hadiah</h2>
+      
+      <form id="addPrizeForm" class="flex gap-4 mb-6">
+        <input type="text" id="prizeName" placeholder="Nama Hadiah" required
+          class="bg-gray-700 p-2 rounded flex-1 outline-none text-white" />
+        
+        <input type="number" id="prizeProb" placeholder="Probabilitas (%)" step="0.001" required
+          class="bg-gray-700 p-2 rounded w-32 outline-none text-white" />
+        
+        <select id="prizeColor" class="bg-gray-700 p-2 rounded outline-none text-white">
+          <option value="bg-gray-400">Abu-abu (Biasa)</option>
+          <option value="bg-blue-500">Biru (Jarang)</option>
+          <option value="bg-purple-500">Ungu (Epic)</option>
+          <option value="bg-red-600">Merah (Legendary)</option>
+          <option value="bg-yellow-400">Emas (Jackpot)</option>
+        </select>
+        
+        <button type="submit" class="bg-green-500 px-4 py-2 rounded font-bold hover:bg-green-600">Tambah</button>
+      </form>
+
+      <table class="w-full text-left border-collapse">
+        <thead>
+          <tr class="border-b border-gray-600">
+            <th class="p-2">Nama Hadiah</th>
+            <th class="p-2">Warna</th>
+            <th class="p-2">Probabilitas</th>
+            <th class="p-2">Aksi</th>
+          </tr>
+        </thead>
+        <tbody id="prizesTableBody">
+          <!-- Tabel hadiah akan diisi oleh JavaScript -->
+        </tbody>
+      </table>
+    </div>
+
+    <!-- ================= USER GACHA UI ================= -->
+    <div id="gachaPanel" class="bg-gray-800 p-8 rounded-lg shadow-lg relative overflow-hidden flex flex-col items-center">
+      
+      <!-- Garis Penunjuk Tengah (Seperti garis merah di CS2) -->
+      <div class="absolute top-8 bottom-32 left-1/2 w-1 bg-yellow-400 z-10 transform -translate-x-1/2 shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
+
+      <!-- Container Spinner -->
+      <div class="w-[600px] max-w-full overflow-hidden bg-gray-900 rounded-md py-4 mt-4 relative border-2 border-gray-700">
+        <div id="spinnerTrack" class="flex gap-4" style="width: max-content; transform: translateX(0px);">
+          <!-- Kotak-kotak gacha akan diisi oleh JavaScript -->
+        </div>
+      </div>
+
+      <button id="spinBtn" class="mt-10 bg-green-500 hover:bg-green-400 hover:scale-105 hover:shadow-[0_0_15px_rgba(34,197,94,0.5)] px-8 py-3 rounded-full text-xl font-bold transition-all">
+        Buka Gacha
+      </button>
+    </div>
+
+    <!-- ================= POPUP MODAL HADIAH ================= -->
+    <div id="popupModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
+      <div class="bg-gray-800 border-2 border-gray-600 p-8 rounded-2xl flex flex-col items-center animate-bounce-in max-w-sm w-full text-center">
+        <h3 class="text-2xl font-bold mb-4 text-gray-200">Kamu Mendapatkan:</h3>
+        
+        <div id="popupPrizeBox" class="w-32 h-32 rounded-xl flex items-center justify-center shadow-2xl mb-6">
+          <span id="popupPrizeName" class="text-xl font-extrabold text-white drop-shadow-lg text-center px-2">
+            <!-- Nama pemenang -->
+          </span>
+        </div>
+        
+        <button id="resetBtn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-8 py-3 rounded-full transition w-full">
+          Oke, Mengerti! (Reset)
+        </button>
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // State Aplikasi
+    let isAdmin = false;
+    let isSpinning = false;
+    let prizes = [
+      { id: 1, name: 'Zonk', color: 'bg-gray-400', probability: 70 },
+      { id: 2, name: 'Skin Normal', color: 'bg-blue-500', probability: 20 },
+      { id: 3, name: 'Skin Epic', color: 'bg-purple-500', probability: 8 },
+      { id: 4, name: 'Robux 200', color: 'bg-yellow-400', probability: 1.999 },
+      { id: 5, name: 'Jackpot', color: 'bg-red-600', probability: 0.001 },
+    ];
+
+    // Referensi Elemen DOM
+    const toggleModeBtn = document.getElementById('toggleModeBtn');
+    const adminPanel = document.getElementById('adminPanel');
+    const gachaPanel = document.getElementById('gachaPanel');
+    const prizesTableBody = document.getElementById('prizesTableBody');
+    const addPrizeForm = document.getElementById('addPrizeForm');
+    const spinnerTrack = document.getElementById('spinnerTrack');
+    const spinBtn = document.getElementById('spinBtn');
+    const popupModal = document.getElementById('popupModal');
+    const popupPrizeBox = document.getElementById('popupPrizeBox');
+    const popupPrizeName = document.getElementById('popupPrizeName');
+    const resetBtn = document.getElementById('resetBtn');
+
+    // Fungsi Render Tabel Admin
+    function renderAdminTable() {
+      prizesTableBody.innerHTML = '';
+      prizes.forEach(prize => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b border-gray-700';
+        tr.innerHTML = `
+          <td class="p-2">${prize.name}</td>
+          <td class="p-2"><div class="w-6 h-6 rounded ${prize.color}"></div></td>
+          <td class="p-2">${prize.probability}%</td>
+          <td class="p-2">
+            <button onclick="deletePrize(${prize.id})" class="text-red-400 hover:text-red-300">Hapus</button>
+          </td>
+        `;
+        prizesTableBody.appendChild(tr);
+      });
+    }
+
+    // Fungsi Hapus Hadiah
+    function deletePrize(id) {
+      prizes = prizes.filter(p => p.id !== id);
+      renderAdminTable();
+      renderInitialSpinner(); // Refresh UI spinner
+    }
+
+    // Tambah Hadiah Baru
+    addPrizeForm.addEventListener('submit', function(e) {
+      e.preventDefault();
+      const name = document.getElementById('prizeName').value;
+      const prob = document.getElementById('prizeProb').value;
+      const color = document.getElementById('prizeColor').value;
+
+      prizes.push({
+        id: Date.now(),
+        name: name,
+        probability: Number(prob),
+        color: color
+      });
+
+      document.getElementById('prizeName').value = '';
+      document.getElementById('prizeProb').value = '';
+      renderAdminTable();
+      renderInitialSpinner();
+    });
+
+    // Toggle Mode Admin/Gacha
+    toggleModeBtn.addEventListener('click', () => {
+      isAdmin = !isAdmin;
+      if (isAdmin) {
+        toggleModeBtn.innerText = 'Ke Mode Gacha';
+        adminPanel.classList.remove('hidden');
+        gachaPanel.classList.add('hidden');
+      } else {
+        toggleModeBtn.innerText = 'Ke Mode Admin';
+        adminPanel.classList.add('hidden');
+        gachaPanel.classList.remove('hidden');
+      }
+    });
+
+    // Fungsi Probabilitas Berbobot
+    function getWeightedPrize() {
+      const totalWeight = prizes.reduce((sum, prize) => sum + Number(prize.probability), 0);
+      let randomNum = Math.random() * totalWeight;
+      for (let prize of prizes) {
+        if (randomNum <= prize.probability) {
+          return prize;
+        }
+        randomNum -= prize.probability;
+      }
+      return prizes[prizes.length - 1]; 
+    }
+
+    // Render HTML untuk satu kotak gacha
+    function createGachaItemHTML(item) {
+      return `
+        <div class="w-[104px] h-[104px] flex-shrink-0 flex items-center justify-center rounded-lg shadow-inner ${item ? item.color : 'bg-gray-700'}">
+          <span class="text-center font-bold text-sm text-white drop-shadow-md p-1">
+            ${item ? item.name : ''}
+          </span>
+        </div>
+      `;
+    }
+
+    // Render Spinner Awal (Kosongan/Dummy sebelum diputar)
+    function renderInitialSpinner() {
+      spinnerTrack.innerHTML = '';
+      for (let i = 0; i < 7; i++) {
+        spinnerTrack.innerHTML += createGachaItemHTML(null);
+      }
+    }
+
+    // Logika Utama Gacha (Spin)
+    spinBtn.addEventListener('click', () => {
+      if (isSpinning || prizes.length === 0) return;
+      isSpinning = true;
+      spinBtn.innerText = 'Sedang Membuka...';
+      spinBtn.classList.replace('bg-green-500', 'bg-gray-600');
+      spinBtn.classList.replace('hover:bg-green-400', 'cursor-not-allowed');
+      spinBtn.classList.remove('hover:scale-105');
+
+      // 1. Reset posisi ke 0 secara instan
+      spinnerTrack.style.transition = 'none';
+      spinnerTrack.style.transform = 'translateX(0px)';
+      
+      // Paksa browser membaca DOM ulang agar perubahan instan terjadi (Reflow)
+      void spinnerTrack.offsetWidth; 
+
+      // 2. Tentukan Pemenang dan buat barisan kotak
+      const winner = getWeightedPrize();
+      const totalItems = 60;
+      const winningIndex = 50; 
+      
+      let itemsHTML = '';
+      for (let i = 0; i < totalItems; i++) {
+        if (i === winningIndex) {
+          itemsHTML += createGachaItemHTML(winner);
+        } else {
+          const randomFill = prizes[Math.floor(Math.random() * prizes.length)];
+          itemsHTML += createGachaItemHTML(randomFill);
+        }
+      }
+      spinnerTrack.innerHTML = itemsHTML;
+
+      // 3. Mulai Animasi Putaran
+      setTimeout(() => {
+        const itemWidth = 120; // 104px kotak + 16px gap (1rem)
+        const containerWidth = 600; 
+        const centerOffset = containerWidth / 2 - itemWidth / 2;
+        const randomStop = Math.random() * 40 - 20; // Variasi stop agar tidak presisi di tengah terus
+        
+        const finalPosition = -(winningIndex * itemWidth) + centerOffset + randomStop;
+
+        // Terapkan transisi lambat 5 detik mirip Roulette
+        spinnerTrack.style.transition = 'transform 5s cubic-bezier(0.15, 0.85, 0.15, 1)';
+        spinnerTrack.style.transform = `translateX(${finalPosition}px)`;
+
+        // 4. Munculkan Popup setelah 5.2 detik
+        setTimeout(() => {
+          // Set detail modal pemenang
+          popupPrizeBox.className = `w-32 h-32 rounded-xl flex items-center justify-center shadow-2xl mb-6 ${winner.color}`;
+          popupPrizeName.innerText = winner.name;
+          popupModal.classList.remove('hidden'); // Munculkan pop-up
+        }, 5200);
+
+      }, 50);
+    });
+
+    // Logika Reset
+    resetBtn.addEventListener('click', () => {
+      popupModal.classList.add('hidden'); // Sembunyikan popup
+      isSpinning = false;
+      
+      // Kembalikan tombol spin
+      spinBtn.innerText = 'Buka Gacha';
+      spinBtn.classList.replace('bg-gray-600', 'bg-green-500');
+      spinBtn.classList.replace('cursor-not-allowed', 'hover:bg-green-400');
+      spinBtn.classList.add('hover:scale-105');
+
+      // RESET ANIMASI: Hilangkan transisi, kembalikan ke awal
+      spinnerTrack.style.transition = 'none';
+      spinnerTrack.style.transform = 'translateX(0px)';
+      renderInitialSpinner(); // Kembalikan ke dummy kosong
+    });
+
+    // Inisialisasi awal
+    renderAdminTable();
+    renderInitialSpinner();
+  </script>
+</body>
+</html>
