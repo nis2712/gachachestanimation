@@ -3,15 +3,16 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Bangsann Chest</title>
+  <title>CS2 Style Gacha Box</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
     @keyframes bounce-in {
-      0% { transform: scale(0.8); opacity: 0; }
-      50% { transform: scale(1.05); opacity: 1; }
-      100% { transform: scale(1); opacity: 1; }
+      0% { transform: scale(0.8) translate(-50%, 20px); opacity: 0; }
+      50% { transform: scale(1.05) translate(-48%, 0); opacity: 1; }
+      100% { transform: scale(1) translate(-50%, 0); opacity: 1; }
     }
     .animate-bounce-in {
+      /* Penyesuaian animasi karena sekarang menggunakan transform translate */
       animation: bounce-in 0.4s cubic-bezier(0.15, 0.85, 0.15, 1) forwards;
     }
   </style>
@@ -19,7 +20,7 @@
 <body class="bg-gray-900 text-white font-sans min-h-screen p-8">
 
   <div class="max-w-4xl mx-auto">
-    <!-- Header (Sekarang hanya berisi tombol Admin/Gacha di kanan) -->
+    <!-- Header -->
     <div class="flex justify-end items-center mb-8">
       <button id="toggleModeBtn" class="bg-gray-700 px-4 py-2 rounded hover:bg-gray-600 transition">
         Ke Mode Admin
@@ -58,52 +59,53 @@
           </tr>
         </thead>
         <tbody id="prizesTableBody">
-          <!-- Tabel hadiah -->
         </tbody>
       </table>
     </div>
 
     <!-- ================= USER GACHA UI ================= -->
-    <div id="gachaPanel" class="bg-gray-800 p-8 rounded-lg shadow-lg flex flex-col items-center">
+    <!-- Tambahkan relative di sini agar popup bisa diposisikan di dalam -->
+    <div id="gachaPanel" class="bg-gray-800 p-8 rounded-lg shadow-lg flex flex-col items-center relative">
       
-      <!-- Judul dipindah ke sini (Tepat di atas kotak Gacha) -->
+      <!-- Judul -->
       <h1 class="text-3xl font-bold text-yellow-400 mb-8 text-center drop-shadow-md">
-        1 MAWAR BUKA CHEST ISI AKUN
+        1 Mawar Buka Chest Isi Akun
       </h1>
 
       <!-- Container Spinner -->
       <div class="w-[600px] max-w-full overflow-hidden bg-gray-900 rounded-md py-4 relative border-2 border-gray-700 shadow-inner">
         
-        <!-- Garis Penunjuk Tengah (Dipindah ke dalam kontainer spinner agar ukurannya pas) -->
+        <!-- Garis Penunjuk Tengah -->
         <div class="absolute top-0 bottom-0 left-1/2 w-1 bg-yellow-400 z-10 transform -translate-x-1/2 shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
 
         <div id="spinnerTrack" class="flex gap-4 px-[248px]" style="width: max-content; transform: translateX(0px);">
-          <!-- Kotak-kotak gacha akan diisi oleh JavaScript -->
+          <!-- Kotak-kotak gacha -->
         </div>
       </div>
 
       <button id="spinBtn" class="mt-10 bg-green-500 hover:bg-green-400 hover:scale-105 hover:shadow-[0_0_15px_rgba(34,197,94,0.5)] px-8 py-3 rounded-full text-xl font-bold transition-all">
         Buka Gacha
       </button>
-    </div>
 
-    <!-- ================= POPUP MODAL HADIAH ================= -->
-    <div id="popupModal" class="hidden fixed inset-0 bg-black/70 flex items-center justify-center z-50 backdrop-blur-sm">
-      <div class="bg-gray-800 border-2 border-gray-600 p-8 rounded-2xl flex flex-col items-center animate-bounce-in max-w-sm w-full text-center">
-        <h3 class="text-2xl font-bold mb-4 text-gray-200">Kamu Mendapatkan:</h3>
-        
-        <div id="popupPrizeBox" class="w-32 h-32 rounded-xl flex items-center justify-center shadow-2xl mb-6">
-          <span id="popupPrizeName" class="text-xl font-extrabold text-white drop-shadow-lg text-center px-2">
-            <!-- Nama pemenang -->
-          </span>
+      <!-- ================= POPUP MODAL HADIAH ================= -->
+      <!-- Dipindah ke dalam gachaPanel, posisi absolute, ukuran diperkecil -->
+      <div id="popupModal" class="hidden absolute top-[180px] left-1/2 transform -translate-x-1/2 z-50 w-72">
+        <div class="bg-gray-800 border-2 border-gray-600 p-5 rounded-xl flex flex-col items-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-bounce-in text-center">
+          <h3 class="text-lg font-bold mb-3 text-gray-200">Kamu Mendapatkan:</h3>
+          
+          <div id="popupPrizeBox" class="w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4">
+            <span id="popupPrizeName" class="text-sm font-extrabold text-white drop-shadow-md text-center px-1">
+              <!-- Nama pemenang -->
+            </span>
+          </div>
+          
+          <button id="resetBtn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-6 py-2 text-sm rounded-full transition w-full">
+            Oke, Mengerti!
+          </button>
         </div>
-        
-        <button id="resetBtn" class="bg-yellow-500 hover:bg-yellow-400 text-gray-900 font-bold px-8 py-3 rounded-full transition w-full">
-          Oke, Mengerti!
-        </button>
       </div>
+      
     </div>
-
   </div>
 
   <script>
@@ -256,9 +258,9 @@
         const containerWidth = 600; 
         const centerOffset = containerWidth / 2 - itemWidth / 2;
         
-        // Posisikan kotak penanda sedikit acak agar realistis
+        // Posisikan kotak penanda sedikit acak
         const randomStop = Math.random() * 40 - 20; 
-        const paddingOffset = 248; // Offset tambahan dari class px-[248px]
+        const paddingOffset = 248; 
         
         const finalPosition = -(winningIndex * itemWidth) + centerOffset + randomStop - paddingOffset;
 
@@ -267,7 +269,7 @@
 
         // Munculkan popup saat animasi selesai
         setTimeout(() => {
-          popupPrizeBox.className = `w-32 h-32 rounded-xl flex items-center justify-center shadow-2xl mb-6 ${winner.color}`;
+          popupPrizeBox.className = `w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4 ${winner.color}`;
           popupPrizeName.innerText = winner.name;
           popupModal.classList.remove('hidden');
         }, 5200);
