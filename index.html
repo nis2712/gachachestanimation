@@ -6,13 +6,13 @@
   <title>CS2 Style Gacha Box</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
+    /* Animasi pantulan kecil untuk pop-up */
     @keyframes bounce-in {
-      0% { transform: scale(0.8) translate(-50%, 20px); opacity: 0; }
-      50% { transform: scale(1.05) translate(-48%, 0); opacity: 1; }
-      100% { transform: scale(1) translate(-50%, 0); opacity: 1; }
+      0% { transform: scale(0.8); opacity: 0; }
+      50% { transform: scale(1.05); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
     }
     .animate-bounce-in {
-      /* Penyesuaian animasi karena sekarang menggunakan transform translate */
       animation: bounce-in 0.4s cubic-bezier(0.15, 0.85, 0.15, 1) forwards;
     }
   </style>
@@ -64,10 +64,9 @@
     </div>
 
     <!-- ================= USER GACHA UI ================= -->
-    <!-- Tambahkan relative di sini agar popup bisa diposisikan di dalam -->
     <div id="gachaPanel" class="bg-gray-800 p-8 rounded-lg shadow-lg flex flex-col items-center relative">
       
-      <!-- Judul -->
+      <!-- Judul Tepat di Tengah -->
       <h1 class="text-3xl font-bold text-yellow-400 mb-8 text-center drop-shadow-md">
         1 Mawar Buka Chest Isi Akun
       </h1>
@@ -79,7 +78,7 @@
         <div class="absolute top-0 bottom-0 left-1/2 w-1 bg-yellow-400 z-10 transform -translate-x-1/2 shadow-[0_0_10px_rgba(250,204,21,1)]"></div>
 
         <div id="spinnerTrack" class="flex gap-4 px-[248px]" style="width: max-content; transform: translateX(0px);">
-          <!-- Kotak-kotak gacha -->
+          <!-- Kotak-kotak gacha akan diisi oleh JavaScript -->
         </div>
       </div>
 
@@ -88,9 +87,9 @@
       </button>
 
       <!-- ================= POPUP MODAL HADIAH ================= -->
-      <!-- Dipindah ke dalam gachaPanel, posisi absolute, ukuran diperkecil -->
-      <div id="popupModal" class="hidden absolute top-[180px] left-1/2 transform -translate-x-1/2 z-50 w-72">
-        <div class="bg-gray-800 border-2 border-gray-600 p-5 rounded-xl flex flex-col items-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-bounce-in text-center">
+      <!-- Wrapper full-width dengan flex justify-center agar posisi PASTI di tengah -->
+      <div id="popupModal" class="hidden absolute top-[180px] left-0 w-full flex justify-center z-50">
+        <div class="bg-gray-800 border-2 border-gray-600 p-5 rounded-xl flex flex-col items-center shadow-[0_10px_40px_rgba(0,0,0,0.8)] animate-bounce-in text-center w-72">
           <h3 class="text-lg font-bold mb-3 text-gray-200">Kamu Mendapatkan:</h3>
           
           <div id="popupPrizeBox" class="w-20 h-20 rounded-lg flex items-center justify-center shadow-inner mb-4">
